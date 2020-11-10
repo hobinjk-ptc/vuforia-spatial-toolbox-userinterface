@@ -108,12 +108,12 @@ createNameSpace("realityEditor.gui.glRenderer");
             });
         }
     }
-    
+
     let canvas;
     let gl;
     const functions = [];
     const constants = {};
-    
+
     function initService() {
         // canvas = globalCanvas.canvas;
         canvas = document.querySelector('#glcanvas');
@@ -216,28 +216,28 @@ createNameSpace("realityEditor.gui.glRenderer");
 
         // let end = performance.now();
         // console.log(end - start);
-        
+
         // console.log('rendered ' + proxies.length + ' proxies');
-        
+
         requestAnimationFrame(renderFrame);
     }
-    
+
     function generateWorkerIdForTool(toolId) {
         // method 1 - generate randomly
         // workerIds[toolId] = realityEditor.utilities.randomIntInc(1, 65535);
-        
+
         // method 2 - generate incrementally
         workerIds[toolId] = nextWorkerId;
         nextWorkerId += 1;
         return workerIds[toolId];
     }
-    
+
     function addWebGlProxy(toolId) {
         const worker = globalDOMCache['iframe' + toolId].contentWindow;
         let proxy = new WorkerGLProxy(worker, gl, generateWorkerIdForTool(toolId));
         proxies.push(proxy);
         toolIdToProxy[toolId] = proxy;
-        
+
         worker.postMessage(JSON.stringify({
             workerId: workerIds[toolId]
         }), '*');
