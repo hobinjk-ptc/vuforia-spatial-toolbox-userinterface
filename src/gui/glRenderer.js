@@ -198,8 +198,15 @@ createNameSpace("realityEditor.gui.glRenderer");
         }
     }
 
+    window.timings = {
+        getCommands: {},
+        getAllCommands: {},
+        executeCommands: {},
+        frames: {},
+    };
+
     async function renderFrame() {
-        // let start = performance.now();
+        let start = performance.now();
         let proxiesToBeRenderedThisFrame = getSafeProxySubset();
 
         // Get all the commands from the worker iframes
@@ -208,6 +215,17 @@ createNameSpace("realityEditor.gui.glRenderer");
         //     proxy2.getFrameCommands(),
         // ]);
         await Promise.all(proxiesToBeRenderedThisFrame.map(proxy => proxy.getFrameCommands()));
+
+        const proxyLen = proxiesToBeRenderedThisFrame.length;
+
+        if (!window.timings.getAllCommands.hasOwnProperty(proxyLen)) {
+            window.timings.getCommands[proxyLen] = [];
+            window.timings.getAllCommands[proxyLen] = [];
+            window.timings.executeCommands[proxyLen] = [];
+            window.timings.frames[proxyLen] = [];
+        }
+
+        window.timings.getAllCommands[proxyLen].push(performance.now() - start);
 
         gl.clearColor(0.0, 0.0, 0.0, 0.0);  // Clear to black, fully opaque
         gl.clearDepth(1.0);                 // Clear everything
@@ -231,6 +249,7 @@ createNameSpace("realityEditor.gui.glRenderer");
 
         // console.log('rendered ' + proxies.length + ' proxies');
 
+        window.timings.frames[proxyLen].push(performance.now() - start);
         requestAnimationFrame(renderFrame);
     }
 
