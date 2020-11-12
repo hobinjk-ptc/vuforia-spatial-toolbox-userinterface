@@ -51,10 +51,12 @@ createNameSpace("realityEditor.gui.glRenderer");
 
             const res = this.executeCommand(message);
 
-            this.worker.postMessage({
-                id: message.id,
-                result: res,
-            }, '*');
+            if (message.wantsResponse) {
+                this.worker.postMessage({
+                    id: message.id,
+                    result: res,
+                }, '*');
+            }
         }
 
         executeCommand(message) {
