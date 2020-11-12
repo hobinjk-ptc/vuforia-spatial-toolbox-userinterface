@@ -60,6 +60,16 @@ createNameSpace("realityEditor.gui.glRenderer");
         }
 
         executeCommand(message) {
+            if (message.messages) {
+                for (let bufferedMessage of message.messages) {
+                    this.executeOneCommand(bufferedMessage);
+                }
+            } else {
+                this.executeOneCommand(message);
+            }
+        }
+
+        executeOneCommand(message) {
             for (let i = 0; i < message.args.length; i++) {
                 let arg = message.args[i];
                 if (arg && arg.fakeClone) {
