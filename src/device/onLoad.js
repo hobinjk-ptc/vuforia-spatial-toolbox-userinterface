@@ -198,7 +198,11 @@ realityEditor.device.onload = function () {
                     enablePoseTrackingTimeout = setTimeout(enablePoseTracking, 100);
                     return;
                 }
-                realityEditor.app.appFunctionCall("enablePoseTracking", {ip: bestWorldObject.ip});
+                realityEditor.app.appFunctionCall("enablePoseTracking", {
+                    ip: bestWorldObject.ip,
+                    networkId: cachedEdgeAgentSettings.networkUUID,
+                    networkSecret: cachedEdgeAgentSettings.networkSecret
+                });
 
                 let recordButton = document.getElementById('recordPointCloudsButton');
                 if (!recordButton) {
@@ -250,7 +254,7 @@ realityEditor.device.onload = function () {
         console.log('user wants newSecret to be', newValue);
     });
 
-    let cachedSettings = {};
+    let cachedEdgeAgentSettings = {};
     const localSettingsHost = `127.0.0.1:${realityEditor.device.environment.getLocalServerPort()}`;
     if (window.location.host.split(':')[0] === localSettingsHost.split(':')[0]) {
         setInterval(async () => {
@@ -262,13 +266,13 @@ realityEditor.device.onload = function () {
                 return;
             }
             let anyChanged = Math.random() < 0.1;
-            if (cachedSettings.isConnected !== settings.isConnected) {
+            if (cachedEdgeAgentSettings.isConnected !== settings.isConnected) {
                 toggleCloudUrl.onToggleCallback(settings.isConnected);
                 anyChanged = true;
             }
-            if ((cachedSettings.serverUrl !== settings.serverUrl) ||
-                (cachedSettings.networkUUID !== settings.networkUUID) ||
-                (cachedSettings.networkSecret !== settings.networkSecret)) {
+            if ((cachedEdgeAgentSettings.serverUrl !== settings.serverUrl) ||
+                (cachedEdgeAgentSettings.networkUUID !== settings.networkUUID) ||
+                (cachedEdgeAgentSettings.networkSecret !== settings.networkSecret)) {
                 anyChanged = true;
                 toggleCloudUrl.onTextCallback(`https://${settings.serverUrl}/stable` +
                                               `/n/${settings.networkUUID}` +
@@ -276,7 +280,7 @@ realityEditor.device.onload = function () {
                 toggleNewNetworkId.onTextCallback(settings.networkUUID);
                 toggleNewSecret.onTextCallback(settings.networkSecret);
             }
-            cachedSettings = settings;
+            cachedEdgeAgentSettings = settings;
             if (anyChanged) {
                 document.getElementById("settingsIframe").contentWindow.postMessage(JSON.stringify({
                     getSettings: realityEditor.gui.settings.generateGetSettingsJsonMessage(),
