@@ -348,6 +348,22 @@ realityEditor.app.stopVideoRecording = function (videoId) {
 };
 
 /**
+ * Starts virtualizer recording (color, depth, and pose) that are automatically
+ * uploaded to a remote server (the cloud proxy or the remote operator)
+ */
+realityEditor.app.startVirtualizerRecording = function () {
+    this.appFunctionCall('startVirtualizerRecording', {}, null);
+};
+
+/**
+ * Stops virtualizer recording (color, depth, and pose) which uploads all files
+ * to a remote server (the cloud proxy or the remote operator)
+ */
+realityEditor.app.stopVirtualizerRecording = function () {
+    this.appFunctionCall('stopVirtualizerRecording', {}, null);
+};
+
+/**
  * Makes objects visible even when they move out of the camera view.
  * @deprecated - was implemented in native app, but negatively impacts performance if we want it to be
  *  backwards compatible, because of changes to the Vuforia SDK. It is intentionally internally disabled for now.
