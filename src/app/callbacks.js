@@ -202,59 +202,7 @@ createNameSpace('realityEditor.app.callbacks');
         realityEditor.device.layout.adjustForDevice(deviceName);
     }
 
-    /**
-     * Callback for realityEditor.app.getPosesStream
-     * @param {Array<Object>} poses
-     */
-    function receivePoses(poses) {
-        if (!window.rzvIo) {
-            // window.rzvIo = io('http://jhobin0ml.local:31337');
-            // window.rzvIo = io('http://10.10.10.166:31337');
-            // window.rzvIo = io('http://192.168.0.106:31337');
-            // window.rzvIo = io('http://192.168.50.98:31337');
-
-            let bestWorldObject = realityEditor.worldObjects.getBestWorldObject();
-            if (!bestWorldObject || bestWorldObject.objectId === realityEditor.worldObjects.getLocalWorldId()) {
-                return;
-            }
-            const wsPort = 31337;
-            const url = `ws://${bestWorldObject.ip}:${wsPort}/`;
-            // const url = 'ws://10.10.10.166:31337/';
-            window.rzvIo = new WebSocket(url);
-        }
-
-        let coolerPoses = [];
-        let worldObject = realityEditor.worldObjects.getBestWorldObject();
-        if (!worldObject) {
-            console.warn('okay I give up');
-            return;
-        }
-        let worldObjectId = worldObject.objectId;
-        let worldNode = realityEditor.sceneGraph.getSceneNodeById(worldObjectId);
-        let gpNode = realityEditor.sceneGraph.getSceneNodeById(realityEditor.sceneGraph.NAMES.GROUNDPLANE + realityEditor.sceneGraph.TAGS.ROTATE_X);
-        if (!gpNode) {
-             gpNode = realityEditor.sceneGraph.getSceneNodeById(realityEditor.sceneGraph.NAMES.GROUNDPLANE);
-        }
-        let cameraNode = realityEditor.sceneGraph.getSceneNodeById(realityEditor.sceneGraph.NAMES.CAMERA);
-        // let persistentClientId = window.localStorage.getItem('persistentClientId') || globalStates.defaultClientName;
-        // let sceneNode = realityEditor.sceneGraph.getSceneNodeById(persistentClientId);
-        let sceneNode = new realityEditor.sceneGraph.SceneNode('posePixel');
-        sceneNode.setParent(realityEditor.sceneGraph.getSceneNodeById('ROOT'));
-        // realityEditor.sceneGraph.changeParent(sceneNode, realityEditor.sceneGraph.NAMES.GROUNDPLANE, false);
-        // let gpNode = sceneNode.parent;
-        // if (!worldNode) {
-        //     worldNode = gpNode;
-        // }
-        let basisNode = worldNode; // gpNode;
-        basisNode.updateWorldMatrix();
-        cameraNode.updateWorldMatrix();
-        // cameraNode.setParent(gpNode);
-        // realityEditor.sceneGraph.changeParent(cameraNode, realityEditor.sceneGraph.NAMES.GROUNDPLANE, false);
-        // if (!basisNode.parent) {
-        //     console.log('updating basis parent');
-        //     realityEditor.sceneGraph.changeParent(basisNode, realityEditor.sceneGraph.NAMES.ROOT, true);
-        // }
-
+    function processPose(poses, {sceneNode, cameraNode, basisNode}) {
         if (poses.length > 0) {
             for (let start in realityEditor.gui.poses.JOINT_NEIGHBORS) {
                 let pointA = poses[start];
@@ -288,6 +236,7 @@ createNameSpace('realityEditor.app.callbacks');
             }
         }
 
+        let coolerPoses = [];
         for (let point of poses) {
             // place it in front of the camera, facing towards the camera
             // sceneNode.setParent(realityEditor.sceneGraph.getSceneNodeById('ROOT')); hmm
@@ -324,6 +273,79 @@ createNameSpace('realityEditor.app.callbacks');
             });
         }
 
+        return coolerPoses;
+    }
+
+    /**
+     * Callback for realityEditor.app.getPosesStream
+     * @param {Array<Object>} poses
+     */
+    function receivePoses(poses) {
+        if (!window.rzvIo) {
+            // window.rzvIo = io('http://jhobin0ml.local:31337');
+            // window.rzvIo = io('http://10.10.10.166:31337');
+            // window.rzvIo = io('http://192.168.0.106:31337');
+            // window.rzvIo = io('http://192.168.50.98:31337');
+
+            let bestWorldObject = realityEditor.worldObjects.getBestWorldObject();
+            if (!bestWorldObject || bestWorldObject.objectId === realityEditor.worldObjects.getLocalWorldId()) {
+                return;
+            }
+            const wsPort = 31337;
+            const url = `ws://${bestWorldObject.ip}:${wsPort}/`;
+            // const url = 'ws://10.10.10.166:31337/';
+            window.rzvIo = new WebSocket(url);
+        }
+
+        let worldObject = realityEditor.worldObjects.getBestWorldObject();
+        if (!worldObject) {
+            console.warn('okay I give up');
+            return;
+        }
+        let worldObjectId = worldObject.objectId;
+        let worldNode = realityEditor.sceneGraph.getSceneNodeById(worldObjectId);
+        let gpNode = realityEditor.sceneGraph.getSceneNodeById(realityEditor.sceneGraph.NAMES.GROUNDPLANE + realityEditor.sceneGraph.TAGS.ROTATE_X);
+        if (!gpNode) {
+             gpNode = realityEditor.sceneGraph.getSceneNodeById(realityEditor.sceneGraph.NAMES.GROUNDPLANE);
+        }
+        let cameraNode = realityEditor.sceneGraph.getSceneNodeById(realityEditor.sceneGraph.NAMES.CAMERA);
+        // let persistentClientId = window.localStorage.getItem('persistentClientId') || globalStates.defaultClientName;
+        // let sceneNode = realityEditor.sceneGraph.getSceneNodeById(persistentClientId);
+        let sceneNode = new realityEditor.sceneGraph.SceneNode('posePixel');
+        sceneNode.setParent(realityEditor.sceneGraph.getSceneNodeById('ROOT'));
+        // realityEditor.sceneGraph.changeParent(sceneNode, realityEditor.sceneGraph.NAMES.GROUNDPLANE, false);
+        // let gpNode = sceneNode.parent;
+        // if (!worldNode) {
+        //     worldNode = gpNode;
+        // }
+        let basisNode = worldNode; // gpNode;
+        basisNode.updateWorldMatrix();
+        cameraNode.updateWorldMatrix();
+        // cameraNode.setParent(gpNode);
+        // realityEditor.sceneGraph.changeParent(cameraNode, realityEditor.sceneGraph.NAMES.GROUNDPLANE, false);
+        // if (!basisNode.parent) {
+        //     console.log('updating basis parent');
+        //     realityEditor.sceneGraph.changeParent(basisNode, realityEditor.sceneGraph.NAMES.ROOT, true);
+        // }
+
+
+        let allPoses = poses;
+        if (poses.length > 0) {
+            if (!Array.isArray(poses[0])) {
+                allPoses = [poses];
+            }
+        }
+
+        const skellys = [];
+
+        for (let pose of allPoses) {
+            const coolerPose = processPose(pose, {sceneNode, cameraNode, basisNode});
+            skellys.push({
+                id: 1337 + skeletonDedupId + skellys.length,
+                joints: coolerPose
+            });
+        }
+
         let initialVehicleMatrix = [
             -1, 0, 0, 0,
             0, 1, 0, 0,
@@ -335,23 +357,18 @@ createNameSpace('realityEditor.app.callbacks');
         sceneNode.updateWorldMatrix();
 
         let cameraMat = sceneNode.getMatrixRelativeTo(basisNode);
-        let msg = {time: Date.now(), pose: [{id: 1337 + skeletonDedupId, joints: coolerPoses}], camera: cameraMat};
+        let msg = {time: Date.now(), pose: skellys, camera: cameraMat};
 
-        // if (window.rzvIo && (coolerPoses.length > 0 || coolerPoses.length !== window.lastPosesLen)) {
-        //     if (coolerPoses.length > 0 || Math.random() > 0.9) {
-        //         window.lastPosesLen = coolerPoses.length;
-        //     }
         if (window.rzvIo.readyState === WebSocket.OPEN) {
             window.rzvIo.send(JSON.stringify(Object.assign({
                 command: '/update/humanPoses'
             }, msg)));
         }
-        // }
 
         let camX = cameraMat[12];
         let camY = cameraMat[13];
         let camZ = cameraMat[14];
-        realityEditor.gui.poses.drawPoses(poses, coolerPoses, {
+        realityEditor.gui.poses.drawPoses(allPoses, skellys, {
             x: camX / 1000,
             y: camY / 1000,
             z: camZ / 1000,

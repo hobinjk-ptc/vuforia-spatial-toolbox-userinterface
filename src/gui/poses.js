@@ -97,7 +97,7 @@ exports.JOINT_NEIGHBORS = JOINT_NEIGHBORS;
 
 // let lastDraw = performance.now();
 
-exports.drawPoses = function(poses, _coords, _cameraPos) {
+exports.drawPoses = function(allPoses, _coords, _cameraPos) {
     let canvas = document.getElementById('supercooldebugcanvas');
     let gfx;
     if (!canvas) {
@@ -134,8 +134,6 @@ exports.drawPoses = function(poses, _coords, _cameraPos) {
     // gfx.fillText(`${format(performance.now() - lastDraw)}`, 16, 96);
     // lastDraw = performance.now();
 
-    const jointSize = 8;
-
     // if (window.outScaleX) {
     //     outWidth *= window.outScaleX;
     // }
@@ -143,9 +141,20 @@ exports.drawPoses = function(poses, _coords, _cameraPos) {
     //     outHeight *= window.outScaleY;
     // }
 
+    if (allPoses.length === 0) {
+        return;
+    }
+    for (let pose of allPoses) {
+        drawPose(gfx, pose);
+    }
+};
+
+function drawPose(gfx, poses) {
     if (poses.length === 0) {
         return;
     }
+
+    const jointSize = 8;
 
     const pointWidth = poses[0].width;
     const pointHeight = poses[0].height;
@@ -192,6 +201,6 @@ exports.drawPoses = function(poses, _coords, _cameraPos) {
         gfx.lineTo(bx, by);
     }
     gfx.stroke();
-};
+}
 
 }(realityEditor.gui.poses));
