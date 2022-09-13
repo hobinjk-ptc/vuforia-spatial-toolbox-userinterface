@@ -1,9 +1,9 @@
 createNameSpace("realityEditor.gui.threejsScene");
 
 import * as THREE from '../../thirdPartyCode/three/three.module.js';
-import { EffectComposer } from '../../thirdPartyCode/three/postprocessing/EffectComposer.js';
-import { RenderPass } from '../../thirdPartyCode/three/postprocessing/RenderPass.js';
-import { BokehPass } from '../../thirdPartyCode/three/postprocessing/BokehPass.js';
+// import { EffectComposer } from '../../thirdPartyCode/three/postprocessing/EffectComposer.js';
+// import { RenderPass } from '../../thirdPartyCode/three/postprocessing/RenderPass.js';
+// import { BokehPass } from '../../thirdPartyCode/three/postprocessing/BokehPass.js';
 import { FBXLoader } from '../../thirdPartyCode/three/FBXLoader.js';
 import { GLTFLoader } from '../../thirdPartyCode/three/GLTFLoader.module.js';
 import { mergeBufferGeometries } from '../../thirdPartyCode/three/BufferGeometryUtils.module.js';
@@ -15,7 +15,40 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
 (function(exports) {
 
     var camera, scene, renderer;
-    let postprocessing = {};
+    let postCamera, postScene, postMaterial, target;
+
+    const postVertexShader = `
+varying vec2 vUv;
+
+void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+    const postFragmentShader = `
+#include <packing>
+
+varying vec2 vUv;
+uniform sampler2D tDiffuse;
+uniform sampler2D tDepth;
+uniform float cameraNear;
+uniform float cameraFar;
+
+
+float readDepth( sampler2D depthSampler, vec2 coord ) {
+    float fragCoordZ = texture2D( depthSampler, coord ).x;
+    float viewZ = perspectiveDepthToViewZ( fragCoordZ, cameraNear, cameraFar );
+    return viewZToOrthographicDepth( viewZ, cameraNear, cameraFar );
+}
+
+void main() {
+    //vec3 diffuse = texture2D( tDiffuse, vUv ).rgb;
+    float depth = readDepth( tDepth, vUv );
+
+    gl_FragColor.rgb = 1.0 - vec3( depth );
+    gl_FragColor.a = 1.0;
+}`;
+
+    // let postprocessing = {};
     var rendererWidth = window.innerWidth;
     var rendererHeight = window.innerHeight;
     var aspectRatio = rendererWidth / rendererHeight;
@@ -54,18 +87,50 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
         scene = new THREE.Scene();
         scene.add(camera); // Normally not needed, but needed in order to add child objects relative to camera
 
-        postprocessing.composer = new EffectComposer(renderer);
-        const renderPass = new RenderPass(scene, camera);
-        postprocessing.bokehPass = new BokehPass(scene, camera, {
-            focus: 980,
-            aperture: 0.001,
-            maxblur: 0.02,
-            width: rendererWidth,
-            height: rendererHeight,
-        });
-        window._debugbokehPass = postprocessing.bokehPass;
-        postprocessing.composer.addPass(renderPass);
-        postprocessing.composer.addPass(postprocessing.bokehPass);
+        postCamera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
+        postMaterial = new THREE.ShaderMaterial( {
+            vertexShader: postVertexShader,
+            fragmentShader: postFragmentShader,
+            uniforms: {
+                cameraNear: { value: camera.near },
+                cameraFar: { value: camera.far },
+                tDiffuse: { value: null },
+                tDepth: { value: null }
+            }
+        } );
+        const postPlane = new THREE.PlaneGeometry( 2, 2 );
+        const postQuad = new THREE.Mesh( postPlane, postMaterial );
+        postScene = new THREE.Scene();
+        postScene.add( postQuad );
+
+        const params = {
+            format: THREE.DepthFormat,
+            type: THREE.UnsignedShortType
+        };
+
+        const format = parseFloat( params.format );
+        const type = parseFloat( params.type );
+
+        target = new THREE.WebGLRenderTarget( window.innerWidth, window.innerHeight );
+        target.texture.minFilter = THREE.NearestFilter;
+        target.texture.magFilter = THREE.NearestFilter;
+        target.stencilBuffer = ( format === THREE.DepthStencilFormat ) ? true : false;
+        target.depthTexture = new THREE.DepthTexture();
+        target.depthTexture.format = format;
+        target.depthTexture.type = type;
+
+        // postprocessing.composer = new EffectComposer(renderer);
+        // const renderPass = new RenderPass(scene, camera);
+        // postprocessing.bokehPass = new BokehPass(scene, camera, {
+        //     focus: 1000,
+        //     aperture: 0.001,
+        //     maxblur: 0.02,
+        //     width: rendererWidth,
+        //     height: rendererHeight,
+        // });
+        // window._debugbokehPass = postprocessing.bokehPass;
+        // postprocessing.composer.addPass(renderPass);
+        // postprocessing.composer.addPass(postprocessing.bokehPass);
 
         // create a parent 3D object to contain all the non-world-aligned three js objects
         // we can apply the transform to this object and all of its children objects will be affected
@@ -235,7 +300,15 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
 
         // only render the scene if the projection matrix is initialized
         if (isProjectionMatrixSet) {
-            postprocessing.composer.render();
+            // postprocessing.composer.render();
+            renderer.setRenderTarget(target);
+            renderer.render(scene, camera);
+
+            postMaterial.uniforms.tDiffuse.value = target.texture;
+            postMaterial.uniforms.tDepth.value = target.textureDepth;
+
+            renderer.setRenderTarget(null);
+            renderer.render(postScene, postCamera);
         }
 
         requestAnimationFrame(renderScene);
