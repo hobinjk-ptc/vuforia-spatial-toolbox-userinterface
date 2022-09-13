@@ -1,6 +1,9 @@
 createNameSpace("realityEditor.gui.threejsScene");
 
 import * as THREE from '../../thirdPartyCode/three/three.module.js';
+import { EffectComposer } from '../../thirdPartyCode/three/postprocessing/EffectComposer.js';
+import { RenderPass } from '../../thirdPartyCode/three/postprocessing/RenderPass.js';
+import { BokehPass } from '../../thirdPartyCode/three/postprocessing/BokehPass.js';
 import { FBXLoader } from '../../thirdPartyCode/three/FBXLoader.js';
 import { GLTFLoader } from '../../thirdPartyCode/three/GLTFLoader.module.js';
 import { mergeBufferGeometries } from '../../thirdPartyCode/three/BufferGeometryUtils.module.js';
@@ -12,6 +15,7 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
 (function(exports) {
 
     var camera, scene, renderer;
+    let postprocessing = {};
     var rendererWidth = window.innerWidth;
     var rendererHeight = window.innerHeight;
     var aspectRatio = rendererWidth / rendererHeight;
@@ -41,13 +45,27 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
         renderer.setSize( rendererWidth, rendererHeight );
         renderer.domElement.id = 'mainThreejsCanvas'; // this applies some css to make it fullscreen
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.0;
+        renderer.toneMappingExposure = 0.9;
         renderer.outputEncoding = THREE.sRGBEncoding;
         document.body.appendChild( renderer.domElement );
+
         camera = new THREE.PerspectiveCamera( 70, aspectRatio, 1, 1000 );
         camera.matrixAutoUpdate = false;
         scene = new THREE.Scene();
         scene.add(camera); // Normally not needed, but needed in order to add child objects relative to camera
+
+        postprocessing.composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        postprocessing.bokehPass = new BokehPass(scene, camera, {
+            focus: 980,
+            aperture: 0.001,
+            maxblur: 0.02,
+            width: rendererWidth,
+            height: rendererHeight,
+        });
+        window._debugbokehPass = postprocessing.bokehPass;
+        postprocessing.composer.addPass(renderPass);
+        postprocessing.composer.addPass(postprocessing.bokehPass);
 
         // create a parent 3D object to contain all the non-world-aligned three js objects
         // we can apply the transform to this object and all of its children objects will be affected
@@ -97,14 +115,14 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
     // light the scene with a combination of ambient and directional white light
     function setupLighting() {
         // This doesn't seem to work with the area target model material, but adding it for everything else
-        let ambLight = new THREE.AmbientLight(0xffffff, 0.3);
-        scene.add(ambLight);
+        // let ambLight = new THREE.AmbientLight(0xffffff, 0.3);
+        // scene.add(ambLight);
 
         // attempts to light the scene evenly with directional lights from each side, but mostly from the top
-        let dirLightTopDown = new THREE.DirectionalLight(0xffffff, 1.5);
-        dirLightTopDown.position.set(0, 1, 0); // top-down
-        dirLightTopDown.lookAt(0, 0, 0);
-        scene.add(dirLightTopDown);
+        // let dirLightTopDown = new THREE.DirectionalLight(0xffffff, 1.5);
+        // dirLightTopDown.position.set(0, 1, 0); // top-down
+        // dirLightTopDown.lookAt(0, 0, 0);
+        // scene.add(dirLightTopDown);
 
         // let dirLightXLeft = new THREE.DirectionalLight(0xffffff, 0.5);
         // dirLightXLeft.position.set(1, 0, 0);
@@ -217,7 +235,7 @@ import { RoomEnvironment } from '../../thirdPartyCode/three/RoomEnvironment.modu
 
         // only render the scene if the projection matrix is initialized
         if (isProjectionMatrixSet) {
-            renderer.render( scene, camera );
+            postprocessing.composer.render();
         }
 
         requestAnimationFrame(renderScene);
