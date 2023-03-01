@@ -13,6 +13,9 @@ import {
 import {
     loadHistory
 } from '../humanPose/index.js';
+import {
+    postPersistRequest,
+} from './utils.js';
 
 export class Analytics {
     constructor() {
@@ -111,7 +114,7 @@ export class Analytics {
         this.timeline.setDisplayRegion(region);
         let livePlayback = region.startTime < 0 || region.endTime < 0;
         if (this.livePlayback && !livePlayback) {
-            await this.postPersistRequest();
+            await postPersistRequest();
         }
         this.livePlayback = livePlayback;
         this.loadingHistory = true;
@@ -119,29 +122,6 @@ export class Analytics {
         this.loadingHistory = false;
         if (region && !fromSpaghetti) {
             setDisplayRegion(region);
-        }
-    }
-
-    /**
-     * Make a request to the world object (in charge of history logging) to
-     * save its log just in case something bad happens
-     */
-    async postPersistRequest() {
-        const worldObject = realityEditor.worldObjects.getBestWorldObject();
-        if (!worldObject) {
-            console.warn('postPersistRequest unable to find worldObject');
-            return;
-        }
-        const historyLogsUrl = realityEditor.network.getURL(worldObject.ip, realityEditor.network.getPort(worldObject), '/history/persist');
-        try {
-            const res = await fetch(historyLogsUrl, {
-                method: 'POST',
-            });
-
-            const body = await res.json();
-            console.log('postPersistRequest logName', body);
-        } catch (e) {
-            console.log('postPersistRequest failed', e);
         }
     }
 
