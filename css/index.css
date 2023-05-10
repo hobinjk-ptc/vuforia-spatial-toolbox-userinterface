@@ -59,15 +59,15 @@
 * {
     -webkit-transform-style: preserve-3d;
     -webkit-transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-   -webkit-user-select: none;
-    -webkit-touch-callout:none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     -webkit-user-drag: none;
 }
 
 #GUI {
-    /* This will affect the z-index of the tool iframes added to the scene */
-    /* If larger than the glcanvas z-index, the tools render on top of the 3D content */
-    z-index: 100;
+    /* This will affect the positioning of the tool iframes added to the scene,
+     * placing them above the glcanvas */
+    transform: translateZ(100px);
 }
 
 body {
