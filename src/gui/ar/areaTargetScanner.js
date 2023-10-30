@@ -23,8 +23,9 @@ createNameSpace("realityEditor.gui.ar.areaTargetScanner");
 
     let hasFirstSeenInstantWorld = false;
 
-    const limitScanRAM = false; // if true, stop area target capture when device memory usage is high
+    const limitScanRAM = true; // if true, stop area target capture when device memory usage is high
     let maximumPercentRAM = 0.33; // the app will stop scanning when it reaches this threshold of total device memory
+    let lastPercentOfDeviceUsedByApp = 0;
 
     let callbacks = {
         onStartScanning: [],
@@ -472,12 +473,17 @@ createNameSpace("realityEditor.gui.ar.areaTargetScanner");
         feedbackTick = feedbackTick % 4;
 
         timeLeftSeconds -= 1;
-        getTimerTextfield().innerHTML = timeLeftSeconds + 's';
-        getTimerTextfield().style.display = 'inline';
 
-        if (timeLeftSeconds <= 0) {
-            stopScanning();
+        let statusMessage = '';
+        if (timeLeftSeconds > 0) {
+            statusMessage = timeLeftSeconds + 's';
+        } else {
+            let percRemaining = Math.round((1 - lastPercentOfDeviceUsedByApp / maximumPercentRAM) * 100);
+            statusMessage = `Over time limit. Memory remaining: ${percRemaining}%`;
         }
+
+        getTimerTextfield().innerHTML = statusMessage;
+        getTimerTextfield().style.display = 'inline';
     }
 
     function onAreaTargetGenerateProgress(percentGenerated) {
@@ -644,6 +650,8 @@ createNameSpace("realityEditor.gui.ar.areaTargetScanner");
         }
 
         if (!isScanning) { return; }
+
+        lastPercentOfDeviceUsedByApp = percentOfDeviceUsedByApp;
 
         // UIApplicationDidReceiveMemoryWarningNotification happens too late in most cases, so we check more stringently
         if (eventName === 'UIApplicationDidReceiveMemoryWarningNotification' ||
